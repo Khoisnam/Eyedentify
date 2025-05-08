@@ -9,7 +9,6 @@ import time
 import cv2
 import os
 
-# xây dựng phân tích tham số đầu vào từ dòng lệnh
 ap = argparse.ArgumentParser()
 ap.add_argument("-m", "--model", type=str, required=True, help="path to trained model")
 ap.add_argument("-l", "--le", type=str, required=True, help="path to label encoder")
@@ -36,43 +35,32 @@ time.sleep(2.0)
 
 # loop over the frames from the video stream
 while True:
-	# lấy frame từ video stream resize kích thước của nó sao cho chiều rộng tối đa là 600 pixel
 	frame = vs.read()
 	frame = imutils.resize(frame, width=600)
-	# lấy kích thước của frame sử dụng thuật toán trừ trung bình
 	(h, w) = frame.shape[:2]
 	blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0,
 		(300, 300), (104.0, 177.0, 123.0))
-	# chuyển blob qua mạng và nhận được các phát hiện và dự đoán
-	net.setInput(blob) # đặt blob làm đầu vào cho mạng neural.
+	net.setInput(blob) 
 	detections = net.forward()
     
     # loop over the detections
 	for i in range(0, detections.shape[2]):
-		# extract độ tin cậy (i.e., probability) liên quan đến dự đoán
 		confidence = detections[0, 0, i, 2]
-		# loại bỏ các confidence yếu
 		if confidence > args["confidence"]:
-			# tính toán tọa độ (x, y) của bouding box cho face và extract the face ROI
 			box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
 			(startX, startY, endX, endY) = box.astype("int")
    
-			# đảm bảo rằng bouding box được phát hiện không nằm ngoài kích thước của frame
 			startX = max(0, startX)
 			startY = max(0, startY)
 			endX = min(w, endX)
 			endY = min(h, endY)
    
-			# trích xuất vùng quan tâm của khuôn mặt (ROI) và sau đó 
-            # tiền xử lý nó theo cách chính xác như dữ liệu training"
 			face = frame[startY:endY, startX:endX]
 			face = cv2.resize(face, (32, 32))
 			face = face.astype("float") / 255.0
 			face = img_to_array(face)
 			face = np.expand_dims(face, axis=0)
    
-            # truyền vùng quan tâm của khuôn mặt (ROI) qua mô hình liveness 
-            # đã được huấn luyện để xác định xem khuôn mặt là 'thật' hay 'giả
 			preds = model.predict(face)[0]
 			j = np.argmax(preds)
 			label = le.classes_[j]
